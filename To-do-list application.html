@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task List</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f1f4f8; margin: 0; padding: 40px 16px; }
+.app { max-width: 500px; margin: 0 auto; background: white; border: 1px solid #dde3ea; border-radius: 8px; overflow: hidden; }
+.header { background: #1e4e8c; color: white; padding: 20px; }
+.header h1 { margin: 0; font-size: 24px; }
+.header p { margin: 4px 0 0; font-size: 14px; }
+.add-box { display: flex; gap: 8px; padding: 16px; }
+.add-box input, .edit-input { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccd3dc; border-radius: 4px; }
+button { padding: 10px 14px; border: none; border-radius: 4px; background: #1e4e8c; color: white; font-size: 14px; cursor: pointer; }
+.edit-btn { background: #e8eef6; color: #1e4e8c; }
+.delete-btn { background: #fbeaea; color: #b91c1c; }
+ul { list-style: none; margin: 0; padding: 0; }
+li { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid #e5e9ef; }
+.task-text { flex: 1; color: #1e293b; }
+.done { text-decoration: line-through; color: #94a3b8; }
+.empty { justify-content: center; color: #64748b; padding: 24px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>Task list</h1>
+    <p>Add, edit and delete your tasks.</p>
+  </div>
+
+  <div class="add-box">
+    <input type="text" id="taskInput" placeholder="What needs to be done?">
+    <button id="addButton">Add task</button>
+  </div>
+
+  <ul id="taskList"></ul>
+</div>
+
+<script>
+// ---------- Variables ----------
+var KEY = "todo-tasks";   // name used to save data in localStorage
+var tasks = [];           // list of tasks, each one: { text: "...", done: false }
+var editingIndex = -1;    // which task is being edited (-1 means none)
+
+var taskInput = document.getElementById("taskInput");
+var taskList = document.getElementById("taskList");
+
+// ---------- Save and load ----------
+function loadTasks() {
+  try {
+    var saved = localStorage.getItem(KEY);
+    if (saved) {
+      tasks = JSON.parse(saved);
+    }
+  } catch (error) {
+    tasks = [];
+  }
+}
+
+function saveTasks() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(tasks));
+  } catch (error) {
+    // storage not available, nothing to do
+  }
+}
+
+// ---------- Add, edit, delete, complete ----------
+function addTask() {
+  var text = taskInput.value.trim();
+  if (text === "") {
+    return;
+  }
+  tasks.push({ text: text, done: false });
+  taskInput.value = "";
+  saveTasks();
+  showTasks();
+}
+
+function startEdit(index) {
+  editingIndex = index;
+  showTasks();
+}
+
+function cancelEdit() {
+  editingIndex = -1;
+  showTasks();
+}
+
+function saveEdit(index, newText) {
+  newText = newText.trim();
+  if (newText !== "") {
+    tasks[index].text = newText;
+  }
+  editingIndex = -1;
+  saveTasks();
+  showTasks();
+}
+
+function deleteTask(index) {
+  tasks.splice(index, 1);
+  editingIndex = -1;
+  saveTasks();
+  showTasks();
+}
+
+function toggleTask(index) {
+  tasks[index].done = !tasks[index].done;
+  saveTasks();
+  showTasks();
+}
+
+// ---------- Show tasks on the page ----------
+function makeButton(label, className, onClick) {
+  var button = document.createElement("button");
+  button.textContent = label;
+  button.className = className;
+  button.onclick = onClick;
+  return button;
+}
+
+function showOneTask(index) {
+  var task = tasks[index];
+  var li = document.createElement("li");
+
+  var checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = task.done;
+  checkbox.onchange = function () { toggleTask(index); };
+  li.appendChild(checkbox);
+
+  if (index === editingIndex) {
+    // Edit mode: show a text box with Save and Cancel
+    var editBox = document.createElement("input");
+    editBox.type = "text";
+    editBox.className = "edit-input";
+    editBox.value = task.text;
+    li.appendChild(editBox);
+    li.appendChild(makeButton("Save", "", function () { saveEdit(index, editBox.value); }));
+    li.appendChild(makeButton("Cancel", "edit-btn", cancelEdit));
+  } else {
+    // Normal mode: show the text with Edit and Delete
+    var text = document.createElement("span");
+    text.textContent = task.text;
+    text.className = task.done ? "task-text done" : "task-text";
+    li.appendChild(text);
+    li.appendChild(makeButton("Edit", "edit-btn", function () { startEdit(index); }));
+    li.appendChild(makeButton("Delete", "delete-btn", function () { deleteTask(index); }));
+  }
+
+  taskList.appendChild(li);
+}
+
+function showTasks() {
+  taskList.innerHTML = "";
+
+  if (tasks.length === 0) {
+    taskList.innerHTML = '<li class="empty">No tasks yet. Add your first task above.</li>';
+    return;
+  }
+
+  for (var i = 0; i < tasks.length; i++) {
+    showOneTask(i);
+  }
+}
+
+// ---------- Start the app ----------
+document.getElementById("addButton").onclick = addTask;
+taskInput.onkeydown = function (event) {
+  if (event.key === "Enter") {
+    addTask();
+  }
+};
+
+loadTasks();
+showTasks();
+</script>
+
+</body>
+</html>
